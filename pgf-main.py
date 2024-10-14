@@ -85,7 +85,7 @@ def convert_unit(unit=None, amount=None):
     elif unit == "duration":
         hours = amount // 3600
         minutes = (amount % 3600) // 60
-        return hours, minutes
+        return f"{int(hours)}:{int(minutes)}"
 
 def get_city_coordinaten(city_name=None):
     params = {
@@ -148,10 +148,11 @@ def get_directions(start_city=None, end_city=None):
             arrival_time = datetime.now()  # Use datetime directly
             departure_time = arrival_time + timedelta(seconds=duration_s)
 
-            formatted_start_time = arrival_time.strftime("%H:%M:%S")
-            formatted_end_time = departure_time.strftime("%H:%M:%S")
+            formatted_start_time = arrival_time.strftime("%H:%M")
+            formatted_end_time = departure_time.strftime("%H:%M")
 
             weather = get_weather(city=end_city)
+            time_until_sun_up_or_down = timestamp_converter(sunrise_time=weather["sunrise"], sunset_time=weather["sunset"], arrival_time=arrival_time)
 
             return {
                 "total_distance": total_distance,
@@ -159,14 +160,16 @@ def get_directions(start_city=None, end_city=None):
                 "duration_time": total_time,
                 "departure_time": formatted_start_time,
                 "arrival_time": formatted_end_time,
-                "weather_end_city": weather
+                "temp_end_city": weather["temp"],
+                "weather_desc_end_city": weather["weather_desc"],
+                "time_until_sun_up_or_down": time_until_sun_up_or_down
             }
         else:
             return f"Error fetching directions: {response.status_code} - {response.text}"
     else:
         return "Could not retrieve coordinates for one or both cities."
 
-def get_weather(city=None):
+def get_weather(city=None, arrival_time=None):
 
     params = {
         "q": city,
@@ -180,35 +183,32 @@ def get_weather(city=None):
     if response.status_code == 200:
         data = response.json()
 
-        sunrise = data['sys']['sunrise']
-        sunset = data['sys']['sunset']
-
-        time_until_sun_up_or_down = timestamp_converter(sunrise_time=sunrise, sunset_time=sunset)
-
         return {
             "temp": data['main']['temp'],
             "weather_desc": data['weather'][0]['description'],
-            "time_until_sun_up_or_down": time_until_sun_up_or_down
+            "sunrise": data['sys']['sunrise'],
+            "sunset": data['sys']['sunset']
         }
 
     else:
         return f"Error: {response.status_code}"
 
-def timestamp_converter(sunrise_time=None, sunset_time=None):
+def timestamp_converter(sunrise_time=None, sunset_time=None, arrival_time=None):
 
-    current_time = int(datetime.now().timestamp())
+    arrival_time_unix = int(arrival_time.timestamp())
 
-    if current_time < sunset_time:
-        time_difference = sunset_time - current_time
+    if arrival_time_unix < sunset_time:
+        time_difference = sunset_time - arrival_time_unix
         hours = time_difference // 3600
         minutes = (time_difference % 3600) // 60
         return [{"sunset_happened": False}, f"{hours}:{minutes}"]
 
     else:
-        time_difference = sunrise_time - current_time
+        time_difference = sunrise_time - arrival_time_unix
         hours = time_difference // 3600
         minutes = (time_difference % 3600) // 60
         return [{"sunset_happened": True}, f"{hours}:{minutes}"]
 
+
 if __name__ == "__main__":
-    print(get_directions(start_city="Eindhoven", end_city="Berlin"))
+    pp.pprint(get_directions(start_city="Eindhoven", end_city="Berlin"))
