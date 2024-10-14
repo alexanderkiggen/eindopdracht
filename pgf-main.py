@@ -1,5 +1,7 @@
+from pprint import pprint
+
 import requests
-import datetime
+from datetime import datetime, timedelta
 import pprint as pp
 
 api_key_transport = '5b3ce3597851110001cf6248a452ed53f6894f49b807209008176de1'
@@ -9,7 +11,7 @@ directions_url = 'https://api.openrouteservice.org/v2/directions/driving-car'
 weather_url = 'http://api.openweathermap.org/data/2.5/weather'
 
 settings = {
-    "temperature_unit": ["celcius", ("celcius", "fahrenheit", "kelvin")],
+    "temperature_unit": ["metric", ("metric", "imperial", "units")],
     "distance_unit": ["kilometers", ("kilometers", "miles")],
     "fuel_cost": [1.820, (1.820,)],
     "fuel_consumption": [7.0, (7.0,)]
@@ -70,7 +72,7 @@ def settings_menu(request_value=None, request_item=None):
     else:
         return f"{request_value} is not a valid option."
 
-def convert_unit(unit, amount):
+def convert_unit(unit=None, amount=None):
     if unit == "temperature_unit":
         pass
 
@@ -85,7 +87,7 @@ def convert_unit(unit, amount):
         minutes = (amount % 3600) // 60
         return hours, minutes
 
-def get_city_coordinaten(city_name):
+def get_city_coordinaten(city_name=None):
     params = {
         'api_key': api_key_transport,
         'text': city_name
@@ -100,7 +102,7 @@ def get_city_coordinaten(city_name):
     else:
         return f"Error fetching coordinates for {city_name}: {response.status_code}"
 
-def get_directions(start_city, end_city):
+def get_directions(start_city=None, end_city=None):
     """
     Haal routebeschrijvingen op tussen twee steden.
 
@@ -142,22 +144,71 @@ def get_directions(start_city, end_city):
             total_price = total_distance / settings["fuel_consumption"][0] * settings["fuel_cost"][0]
             total_time = convert_unit("duration", duration_s)
 
-            arrival_time = datetime.datetime.now()
-            departure_time = arrival_time + datetime.timedelta(seconds=duration_s)
+            # Corrected line here
+            arrival_time = datetime.now()  # Use datetime directly
+            departure_time = arrival_time + timedelta(seconds=duration_s)
 
             formatted_start_time = arrival_time.strftime("%H:%M:%S")
             formatted_end_time = departure_time.strftime("%H:%M:%S")
+
+            weather = get_weather(city=end_city)
 
             return {
                 "total_distance": total_distance,
                 "fuel_price": total_price,
                 "duration_time": total_time,
                 "departure_time": formatted_start_time,
-                "arrival_time": formatted_end_time
+                "arrival_time": formatted_end_time,
+                "weather_end_city": weather
             }
         else:
             return f"Error fetching directions: {response.status_code} - {response.text}"
     else:
-        return  "Could not retrieve coordinates for one or both cities."
+        return "Could not retrieve coordinates for one or both cities."
 
-print(get_directions("Berlin", "Amsterdam"))
+def get_weather(city=None):
+
+    params = {
+        "q": city,
+        "appid": api_key_weather,
+        "lang": "nl",
+        "units": "metric",
+    }
+
+    response = requests.get(weather_url, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        sunrise = data['sys']['sunrise']
+        sunset = data['sys']['sunset']
+
+        time_until_sun_up_or_down = timestamp_converter(sunrise_time=sunrise, sunset_time=sunset)
+
+        return {
+            "temp": data['main']['temp'],
+            "weather_desc": data['weather'][0]['description'],
+            "time_until_sun_up_or_down": time_until_sun_up_or_down
+        }
+
+    else:
+        return f"Error: {response.status_code}"
+
+def timestamp_converter(sunrise_time=None, sunset_time=None):
+
+    current_time = int(datetime.now().timestamp())
+
+    if current_time < sunset_time:
+        time_difference = sunset_time - current_time
+        hours = time_difference // 3600
+        minutes = (time_difference % 3600) // 60
+        return [{"sunset_happened": False}, f"{hours}:{minutes}"]
+
+    else:
+        time_difference = sunrise_time - current_time
+        hours = time_difference // 3600
+        minutes = (time_difference % 3600) // 60
+        return [{"sunset_happened": True}, f"{hours}:{minutes}"]
+
+if __name__ == "__main__":
+    print(get_directions(start_city="Eindhoven", end_city="Berlin"))
