@@ -2,6 +2,7 @@ from pprint import pprint
 import requests
 from datetime import datetime, timedelta
 import pprint as pp
+import re
 
 api_key_transport = '5b3ce3597851110001cf6248a452ed53f6894f49b807209008176de1'
 api_key_weather = '97b8bfd53453a164a52bd9bbf84a080d'
@@ -15,7 +16,6 @@ settings = {
     "fuel_cost": [1.820, (1.820,)],
     "fuel_consumption": [7.0, (7.0,)]
 }
-
 
 def settings_menu(request_value=None, request_item=None):
     if request_value in settings:
@@ -53,7 +53,6 @@ def settings_menu(request_value=None, request_item=None):
     else:
         return f"{request_value} is not a valid option."
 
-
 def convert_unit(unit=None, amount=None):
     if unit == "temperature_unit":
         pass
@@ -67,31 +66,40 @@ def convert_unit(unit=None, amount=None):
     elif unit == "duration":
         hours = amount // 3600
         minutes = (amount % 3600) // 60
-        return f"{int(hours)}:{int(minutes)}"
 
+        if hours >= 8:
+            return None, "De reistijd is langer dan 8 uur. Het programma wordt afgebroken."
+        else:
+            return f"{int(hours)} uur en {int(minutes)} minuten", None
 
 def get_city_coordinaten(city_name=None):
     params = {
         'api_key': api_key_transport,
         'text': city_name
     }
+
     response = requests.get(geocode_url, params=params)
+
     if response.status_code == 200:
         data = response.json()
-        if data['features'][0]['properties']['continent'].lower() == "europe":
-            return data['features'][0]['geometry']['coordinates']
+        if data['features']:
+            if data['features'][0]['properties']['continent'].lower() == "europe":
+                return data['features'][0]['geometry']['coordinates']
+            else:
+                return None
         else:
-            return f"Error: City ({city_name}) not in Europe."
+            return None
     else:
-        return f"Error fetching coordinates for {city_name}: {response.status_code}"
-
+        print(f"Error fetching coordinates for {city_name}: {response.status_code}")
+        return None
 
 def get_directions(start_city=None, end_city=None):
     start_coords = get_city_coordinaten(start_city)
     end_coords = get_city_coordinaten(end_city)
-    if start_coords and end_coords:
+
+    if start_city and end_coords:
         payload = {
-            'coordinates': [start_coords, end_coords]
+            'coordinates': [start_coords, end_coords],
         }
         response = requests.post(directions_url, headers={
             'Authorization': api_key_transport,
@@ -104,20 +112,21 @@ def get_directions(start_city=None, end_city=None):
             duration_s = route['routes'][0]['summary']['duration']
 
             total_distance = convert_unit("distance_unit", distance_m)
-            total_price = total_distance / settings["fuel_consumption"][0] * settings["fuel_cost"][0]
-            total_time = convert_unit("duration", duration_s)
+            total_time, error_message = convert_unit("duration", duration_s)
 
-            # Set the departure time to now
+            if total_time is None:
+                print(error_message)
+                return None
+
+            total_price = total_distance / settings["fuel_consumption"][0] * settings["fuel_cost"][0]
+
             departure_time = datetime.now()
-            # Calculate the actual arrival time
             arrival_time = departure_time + timedelta(seconds=duration_s)
 
             formatted_start_time = departure_time.strftime("%H:%M")
             formatted_end_time = arrival_time.strftime("%H:%M")
 
-            # Fetch weather for the end city
             weather = get_weather(city=end_city)
-            # Calculate the time until sunrise or sunset based on arrival time
             time_until_sun_up_or_down = timestamp_converter(sunrise_time=weather["sunrise"],
                                                             sunset_time=weather["sunset"],
                                                             arrival_time=arrival_time)
@@ -137,13 +146,12 @@ def get_directions(start_city=None, end_city=None):
     else:
         return "Could not retrieve coordinates for one or both cities."
 
-
 def get_weather(city=None):
     params = {
         "q": city,
         "appid": api_key_weather,
         "lang": "nl",
-        "units": "metric",
+        "units": settings["temperature_unit"][0]
     }
 
     response = requests.get(weather_url, params=params)
@@ -160,9 +168,7 @@ def get_weather(city=None):
     else:
         return f"Error: {response.status_code}"
 
-
 def timestamp_converter(sunrise_time=None, sunset_time=None, arrival_time=None):
-    # Convert Unix timestamps to datetime objects
     sunrise_datetime = datetime.fromtimestamp(sunrise_time)
     sunset_datetime = datetime.fromtimestamp(sunset_time)
 
@@ -170,21 +176,49 @@ def timestamp_converter(sunrise_time=None, sunset_time=None, arrival_time=None):
         time_difference = sunrise_datetime - arrival_time
         hours, remainder = divmod(time_difference.seconds, 3600)
         minutes = remainder // 60
-        return [{"next_event": "sunrise"}, f"{hours} hours and {minutes} minutes until sunrise"]
+        return [{"next_event": "sunrise"}, f"{hours} uur en {minutes} minuten tot zonsopkomst"]
 
     elif arrival_time < sunset_datetime:
         time_difference = sunset_datetime - arrival_time
         hours, remainder = divmod(time_difference.seconds, 3600)
         minutes = remainder // 60
-        return [{"next_event": "sunset"}, f"{hours} hours and {minutes} minutes until sunset"]
+        return [{"next_event": "sunset"}, f"{hours} uur en {minutes} minuten tot zonsondergang"]
 
     else:
         next_day_sunrise = sunrise_datetime + timedelta(days=1)
         time_difference = next_day_sunrise - arrival_time
         hours, remainder = divmod(time_difference.seconds, 3600)
         minutes = remainder // 60
-        return [{"next_event": "sunrise"}, f"{hours} hours and {minutes} minutes until next sunrise"]
+        return [{"next_event": "sunrise"}, f"{hours} uur en {minutes} minuten tot de volgende zonsopkomst"]
 
+def parse_duration_and_calculate_arrival(duration):
+    print(f"Duration returned: {duration}")
 
-if __name__ == "__main__":
-    pp.pprint(get_directions(start_city="Amsterdam", end_city="Berlijn"))
+    match = re.search(r'(?:(\d+)\s*uur)?\s*(?:(\d+)\s*minuten)?', duration)
+
+    if match:
+        duration_hours = int(match.group(1)) if match.group(1) else 0
+        duration_minutes = int(match.group(2)) if match.group(2) else 0
+    else:
+        return None, "Error: Unable to parse duration"
+
+    total_duration_hours = duration_hours + duration_minutes / 60
+
+    arrival_time, arrival_context = calculate_arrival_time(total_duration_hours)
+
+    return arrival_time, arrival_context
+
+def calculate_arrival_time(total_duration_hours):
+    current_time = datetime.now()
+    arrival_time = current_time + timedelta(hours=total_duration_hours)
+
+    if arrival_time.date() == current_time.date():
+        arrival_context = "vandaag"
+    elif arrival_time.date() == (current_time + timedelta(days=1)).date():
+        arrival_context = "morgen"
+    elif arrival_time.date() == (current_time + timedelta(days=2)).date():
+        arrival_context = "overmorgen"
+    else:
+        arrival_context = "later"
+
+    return arrival_time, arrival_context
