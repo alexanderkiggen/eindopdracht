@@ -1,5 +1,4 @@
 from pprint import pprint
-
 import requests
 from datetime import datetime, timedelta
 import pprint as pp
@@ -17,25 +16,8 @@ settings = {
     "fuel_consumption": [7.0, (7.0,)]
 }
 
+
 def settings_menu(request_value=None, request_item=None):
-    """
-    Beheer de instellingen van het systeem.
-
-    Deze functie stelt de gebruiker in staat om instellingen te wijzigen,
-    waaronder temperatuur-, afstands-, brandstofkosten en brandstofverbruik.
-    Het biedt ook de mogelijkheid om standaardwaarden te herstellen.
-
-    Parameters:
-    request_value (str): De naam van de instelling die moet worden gewijzigd,
-                         zoals 'temperature_unit', 'distance_unit',
-                         'fuel_cost', 'fuel_consumption', of 'restore_defaults'.
-    request_item (str or float): De nieuwe waarde voor de opgegeven instelling.
-                                  Dit kan een string zijn voor eenheid wijzigingen
-                                  of een float voor kosten en verbruik.
-
-    Returns:
-    str: Een foutmelding als de invoer ongeldig is of niet kan worden verwerkt.
-    """
     if request_value in settings:
         try:
             if request_value == "temperature_unit" or request_value == "distance_unit":
@@ -65,12 +47,12 @@ def settings_menu(request_value=None, request_item=None):
 
     elif request_value == "restore_defaults":
         for key, value in settings.items():
-
             if isinstance(value[1], tuple):
                 new_first_item = value[1][0]
                 value[0] = new_first_item
     else:
         return f"{request_value} is not a valid option."
+
 
 def convert_unit(unit=None, amount=None):
     if unit == "temperature_unit":
@@ -87,6 +69,7 @@ def convert_unit(unit=None, amount=None):
         minutes = (amount % 3600) // 60
         return f"{int(hours)}:{int(minutes)}"
 
+
 def get_city_coordinaten(city_name=None):
     params = {
         'api_key': api_key_transport,
@@ -102,28 +85,8 @@ def get_city_coordinaten(city_name=None):
     else:
         return f"Error fetching coordinates for {city_name}: {response.status_code}"
 
+
 def get_directions(start_city=None, end_city=None):
-    """
-    Haal routebeschrijvingen op tussen twee steden.
-
-    Deze functie haalt de coördinaten op van de start- en eindstad en maakt vervolgens een
-    API-aanroep om route-informatie te verkrijgen, zoals afstand, reistijd, brandstofkosten,
-    en verwachte aankomst- en vertrektijden.
-
-    Parameters:
-    start_city (str): De naam van de vertrekstad.
-    end_city (str): De naam van de bestemmingstad.
-
-    Returns:
-    dict: Een dictionary met de volgende sleutels:
-        - total_distance (float): De totale afstand van de route in de opgegeven eenheid.
-        - fuel_price (float): De geschatte brandstofkosten voor de route.
-        - duration_time (float): De geschatte reistijd.
-        - departure_time (str): De verwachte vertrektijd in HH:MM:SS.
-        - arrival_time (str): De verwachte aankomsttijd in HH:MM:SS.
-
-    Als de API-aanroep mislukt, retourneert de functie een foutmelding met de statuscode en het antwoord van de API.
-    """
     start_coords = get_city_coordinaten(start_city)
     end_coords = get_city_coordinaten(end_city)
     if start_coords and end_coords:
@@ -144,15 +107,20 @@ def get_directions(start_city=None, end_city=None):
             total_price = total_distance / settings["fuel_consumption"][0] * settings["fuel_cost"][0]
             total_time = convert_unit("duration", duration_s)
 
-            # Corrected line here
-            arrival_time = datetime.now()  # Use datetime directly
-            departure_time = arrival_time + timedelta(seconds=duration_s)
+            # Set the departure time to now
+            departure_time = datetime.now()
+            # Calculate the actual arrival time
+            arrival_time = departure_time + timedelta(seconds=duration_s)
 
-            formatted_start_time = arrival_time.strftime("%H:%M")
-            formatted_end_time = departure_time.strftime("%H:%M")
+            formatted_start_time = departure_time.strftime("%H:%M")
+            formatted_end_time = arrival_time.strftime("%H:%M")
 
+            # Fetch weather for the end city
             weather = get_weather(city=end_city)
-            time_until_sun_up_or_down = timestamp_converter(sunrise_time=weather["sunrise"], sunset_time=weather["sunset"], arrival_time=arrival_time)
+            # Calculate the time until sunrise or sunset based on arrival time
+            time_until_sun_up_or_down = timestamp_converter(sunrise_time=weather["sunrise"],
+                                                            sunset_time=weather["sunset"],
+                                                            arrival_time=arrival_time)
 
             return {
                 "total_distance": total_distance,
@@ -169,8 +137,8 @@ def get_directions(start_city=None, end_city=None):
     else:
         return "Could not retrieve coordinates for one or both cities."
 
-def get_weather(city=None, arrival_time=None):
 
+def get_weather(city=None):
     params = {
         "q": city,
         "appid": api_key_weather,
@@ -189,26 +157,34 @@ def get_weather(city=None, arrival_time=None):
             "sunrise": data['sys']['sunrise'],
             "sunset": data['sys']['sunset']
         }
-
     else:
         return f"Error: {response.status_code}"
 
+
 def timestamp_converter(sunrise_time=None, sunset_time=None, arrival_time=None):
+    # Convert Unix timestamps to datetime objects
+    sunrise_datetime = datetime.fromtimestamp(sunrise_time)
+    sunset_datetime = datetime.fromtimestamp(sunset_time)
 
-    arrival_time_unix = int(arrival_time.timestamp())
+    if arrival_time < sunrise_datetime:
+        time_difference = sunrise_datetime - arrival_time
+        hours, remainder = divmod(time_difference.seconds, 3600)
+        minutes = remainder // 60
+        return [{"next_event": "sunrise"}, f"{hours} hours and {minutes} minutes until sunrise"]
 
-    if arrival_time_unix < sunset_time:
-        time_difference = sunset_time - arrival_time_unix
-        hours = time_difference // 3600
-        minutes = (time_difference % 3600) // 60
-        return [{"sunset_happened": False}, f"{hours}:{minutes}"]
+    elif arrival_time < sunset_datetime:
+        time_difference = sunset_datetime - arrival_time
+        hours, remainder = divmod(time_difference.seconds, 3600)
+        minutes = remainder // 60
+        return [{"next_event": "sunset"}, f"{hours} hours and {minutes} minutes until sunset"]
 
     else:
-        time_difference = sunrise_time - arrival_time_unix
-        hours = time_difference // 3600
-        minutes = (time_difference % 3600) // 60
-        return [{"sunset_happened": True}, f"{hours}:{minutes}"]
+        next_day_sunrise = sunrise_datetime + timedelta(days=1)
+        time_difference = next_day_sunrise - arrival_time
+        hours, remainder = divmod(time_difference.seconds, 3600)
+        minutes = remainder // 60
+        return [{"next_event": "sunrise"}, f"{hours} hours and {minutes} minutes until next sunrise"]
 
 
 if __name__ == "__main__":
-    pp.pprint(get_directions(start_city="Eindhoven", end_city="Berlin"))
+    pp.pprint(get_directions(start_city="Amsterdam", end_city="Berlijn"))
