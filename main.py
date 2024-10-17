@@ -1,5 +1,6 @@
 import processen
 import pprint as pp
+import sys
 
 header = "===== De ultieme reis app ====="
 
@@ -9,7 +10,7 @@ def new():
         start_coords = processen.get_city_coordinaten(start_city)
 
         while start_coords is None:
-            print(f"Error: City '{start_city}' is not a valid city in Europe. Please try again.")
+            print(f"Error: City '{start_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
             start_city = input("Please select a valid starting city: ").lower()
             start_coords = processen.get_city_coordinaten(start_city)
 
@@ -17,7 +18,7 @@ def new():
         end_coords = processen.get_city_coordinaten(end_city)
 
         while end_coords is None:
-            print(f"Error: City '{end_city}' is not a valid city in Europe. Please try again.")
+            print(f"Error: City '{end_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
             end_city = input("Please select a valid end city: ").lower()
             end_coords = processen.get_city_coordinaten(end_city)
 
@@ -62,6 +63,17 @@ def new():
 
         print(message)
 
+        continue_question = None
+
+        while continue_question != "y" or continue_question != "n":
+            continue_question = input("Wilt u nog een reis plannen (y/n): ").lower()
+            if continue_question == "y":
+                break
+            elif continue_question == "n":
+                main()
+            else:
+                print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
+
 def load():
     pass
 
@@ -75,44 +87,77 @@ def settings():  # Renamed from settings to settings_menu
         2. Dist      // Change default distance unit
         3. Fuel      // Change default fuel cost price per liter
         4. Cons      // Change default fuel consumption
+        --------------------------------------------------------
         5. Show      // Show all current settings
         6. Restore   // Restore default settings
         7. Back      // Back to home page.
         """
-        print(layout)
 
-        choice = input("Please select an option (1-7): ").lower()
+        while True:
+            print(layout)
+            choice = input("Please select an option (1-7): ").lower()
 
-        if choice == '1' or choice == 'temp':
-            new_temp = input("Enter new temperature unit (metric/imperial/units): ").lower()
-            result = processen.settings_menu("temperature_unit", new_temp)
-            print(result if result else "Temperature unit updated successfully.")
-        elif choice == '2' or choice == 'dist':
-            new_dist = input("Enter new distance unit (kilometers/miles): ").lower()
-            result = processen.settings_menu("distance_unit", new_dist)
-            print(result if result else "Distance unit updated successfully.")
-        elif choice == '3' or choice == 'fuel':
-            new_fuel_cost = input("Enter new fuel cost per liter: ")
-            result = processen.settings_menu("fuel_cost", new_fuel_cost)
-            print(result if result else "Fuel cost updated successfully.")
-        elif choice == '4' or choice == 'cons':
-            new_fuel_cons = input("Enter new fuel consumption (liters per 100km): ")
-            result = processen.settings_menu("fuel_consumption", new_fuel_cons)
-            print(result if result else "Fuel consumption updated successfully.")
-        elif choice == '5' or choice == 'show':
-            print("\nCurrent Settings:")
-            for key, value in processen.settings.items():
-                print(f"{key.replace('_', ' ').capitalize()}: {value[0]}")
-        elif choice == '6' or choice == 'restore':
-            processen.settings_menu("restore_defaults")  # Call the restore defaults functionality
-            print("All settings have been restored to default values.")
-        elif choice == '7' or choice == 'back':
-            main()
-        else:
-            print("Invalid option. Please select a valid number from the menu.")
+            if choice == '1' or choice == 'temp':
+                new_temp = input("Enter new temperature unit (metric/imperial/units): ").lower()
+                result = processen.settings_menu("temperature_unit", new_temp)
+                print(result if result else "Temperature unit updated successfully.")
+
+            elif choice == '2' or choice == 'dist':
+                new_dist = input("Enter new distance unit (kilometers/miles): ").lower()
+                result = processen.settings_menu("distance_unit", new_dist)
+                print(result if result else "Distance unit updated successfully.")
+            elif choice == '3' or choice == 'fuel':
+                new_fuel_cost = input("Enter new fuel cost per liter: ")
+                result = processen.settings_menu("fuel_cost", new_fuel_cost)
+                print(result if result else "Fuel cost updated successfully.")
+            elif choice == '4' or choice == 'cons':
+                new_fuel_cons = input("Enter new fuel consumption (liters per 100km): ")
+                result = processen.settings_menu("fuel_consumption", new_fuel_cons)
+                print(result if result else "Fuel consumption updated successfully.")
+            elif choice == '5' or choice == 'show':
+                print("\nCurrent Settings:")
+                for key, value in processen.settings.items():
+                    print(f"{key.replace('_', ' ').capitalize()}: {value[0]}")
+            elif choice == '6' or choice == 'restore':
+                processen.settings_menu("restore_defaults")
+                print("All settings have been restored to default values.")
+            elif choice == '7' or choice == 'back':
+                main()
+            else:
+                print("Invalid option. Please select a valid number from the menu.", file=sys.stderr)
+
+            continue_question = None
+
+            while continue_question != "y" or continue_question != "n":
+                continue_question = input("Wilt u nog een instelling aanpassen of bekijken (y/n): ").lower()
+                if continue_question == "y":
+                    break
+                elif continue_question == "n":
+                    main()
+                else:
+                    print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
 
 def help():
-    pass
+    layout = f"""
+    {header}
+        --- Help Page ---
+
+    Credits menu bla bla bla bla bla bla bla bla bla
+    bla bla bla bla bla bla bla bla bla bla bla bla
+    bla bla bla bla bla bla bla bla bla bla bla bla
+    bla bla bla bla bla bla bla bla bla bla bla bla
+    """
+    print(layout)
+    continue_question = None
+
+    while continue_question != "y" or continue_question != "n":
+        continue_question = input("Wilt u terug naar het hoofdmenu (y/n): ").lower()
+        if continue_question == "y":
+            break
+        elif continue_question == "n":
+            main()
+        else:
+            print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
 
 def quit():
     while True:
@@ -124,7 +169,7 @@ def quit():
             print("Alright, I will take you back to the main menu.")
             main()
         else:
-            print("Invalid option. Please select a valid letter from the menu.")
+            print("Invalid option. Please select a valid letter from the menu.", file=sys.stderr)
             continue
 
 def main():

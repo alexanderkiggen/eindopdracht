@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta
 import pprint as pp
 import re
+import sys
 
 api_key_transport = '5b3ce3597851110001cf6248a452ed53f6894f49b807209008176de1'
 api_key_weather = '97b8bfd53453a164a52bd9bbf84a080d'
@@ -222,3 +223,6 @@ def calculate_arrival_time(total_duration_hours):
         arrival_context = "later"
 
     return arrival_time, arrival_context
+
+def read_file():
+    pass
