@@ -1,10 +1,5 @@
-from http.client import responses
-
-import json_processen
-import processen
-import pprint as pp
 import sys
-import json_processen
+import processen
 from json_processen import print_trips, add_trip, remove_trip_by_index
 
 header = "===== De ultieme reis app ====="
