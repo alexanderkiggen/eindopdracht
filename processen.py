@@ -220,3 +220,20 @@ def calculate_arrival_time(total_duration_hours):
         arrival_context = "later"
 
     return arrival_time, arrival_context
+
+def printer(
+        start_city, end_city, distance, distance_unit, duration,
+        arrival_context, arrival_time, sunset_info, temp_end_city,
+        temperature_unit, weather_desc_end_city, fuel_price
+):
+    message = f"""
+    De route van {start_city.capitalize()} naar {end_city.capitalize()} bedraagt 
+    {distance:.1f} {distance_unit} en zal ongeveer {duration} duren in een auto. 
+    Als je nu begint met rijden, ben je er {arrival_context} om {arrival_time.strftime("%H:%M")} (zonder tussentijdse pauzes). 
+    Dan heb je nog {sunset_info}. 
+    De temperatuur in {end_city.capitalize()} is momenteel {temp_end_city:.2f}{temperature_unit} en het weer is {weather_desc_end_city}. 
+    De geschatte brandstofprijs voor de rit bedraagt €{fuel_price:.2f}.
+    Veel succes en een veilige reis!
+    """
+
+    print(message)

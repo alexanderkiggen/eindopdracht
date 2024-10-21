@@ -1,6 +1,7 @@
 import sys
 import processen
 from json_processen import print_trips, add_trip, remove_trip_by_index
+from processen import printer
 
 header = "===== De ultieme reis app ====="
 
@@ -80,17 +81,11 @@ def new():
         if arrival_time is None:
             continue
 
-        message = f"""
-        De route van {start_city.capitalize()} naar {end_city.capitalize()} bedraagt 
-        {distance:.1f} {distance_unit} en zal ongeveer {duration} duren in een auto. 
-        Als je nu begint met rijden, ben je er {arrival_context} om {arrival_time.strftime("%H:%M")} (zonder tussentijdse pauzes). 
-        Dan heb je nog {sunset_info}. 
-        De temperatuur in {end_city.capitalize()} is momenteel {temp_end_city:.2f}{temperature_unit} en het weer is {weather_desc_end_city}. 
-        De geschatte brandstofprijs voor de rit bedraagt €{fuel_price:.2f}.
-        Veel succes en een veilige reis!
-        """
-
-        print(message)
+        printer(
+            start_city, end_city, distance, distance_unit, duration,
+            arrival_context, arrival_time, sunset_info, temp_end_city,
+            temperature_unit, weather_desc_end_city, fuel_price
+        )
 
         continue_question = None
 
@@ -103,7 +98,8 @@ def new():
             else:
                 print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
 
-def settings():  # Renamed from settings to settings_menu
+
+def settings():
     while True:
         layout = f"""
         {header}
