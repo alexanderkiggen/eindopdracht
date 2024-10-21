@@ -1,8 +1,42 @@
+from http.client import responses
+
+import json_processen
 import processen
 import pprint as pp
 import sys
+import json_processen
+from json_processen import print_trips, add_trip, remove_trip_by_index
 
 header = "===== De ultieme reis app ====="
+
+def main():
+    while True:
+        layout = f"""
+        {header}
+               --- Home Page ---
+
+        1. New       // Start planning your next trip
+        2. Load      // Load or create a destination pre-set from a file.
+        3. Settings  // Change settings for current session.
+        4. Help      // A guide.
+        5. Quit      // Quit program.
+        """
+        print(layout)
+
+        choice = input("Please select an option (1-5): ").lower()
+
+        if choice == '1' or choice == 'new':
+            new()
+        elif choice == '2' or choice == 'load':
+            load()
+        elif choice == '3' or choice == 'settings':
+            settings()
+        elif choice == '4' or choice == 'help':
+            help()
+        elif choice == '5' or choice == 'quit':
+            quit()
+        else:
+            print("Invalid option. Please select a valid number from the menu.")
 
 def new():
     while True:
@@ -73,9 +107,6 @@ def new():
                 main()
             else:
                 print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
-
-def load():
-    pass
 
 def settings():  # Renamed from settings to settings_menu
     while True:
@@ -150,12 +181,10 @@ def help():
     print(layout)
     continue_question = None
 
-    while continue_question != "y" or continue_question != "n":
-        continue_question = input("Wilt u terug naar het hoofdmenu (y/n): ").lower()
+    while continue_question != "y":
+        continue_question = input("Wilt u terug naar het hoofdmenu (y): ").lower()
         if continue_question == "y":
             break
-        elif continue_question == "n":
-            main()
         else:
             print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
 
@@ -172,34 +201,51 @@ def quit():
             print("Invalid option. Please select a valid letter from the menu.", file=sys.stderr)
             continue
 
-def main():
+def load():
     while True:
         layout = f"""
-        {header}
-               --- Home Page ---
-               
-        1. New       // Start planning your next trip
-        2. Load      // Load or create a destination pre-set from a file.
-        3. Settings  // Change settings for current session.
-        4. Help      // A guide.
-        5. Quit      // Quit program.
-        """
+                {header}
+                    --- Preset Page ---
+
+                1. Show      // Show available trips                
+                2. Back      // Go back to the main menu
+                """
         print(layout)
 
-        choice = input("Please select an option (1-5): ").lower()
+        choice = input("Please select an option (1-2): ").lower()
 
-        if choice == '1' or choice == 'new':
-            new()
-        elif choice == '2' or choice == 'load':
-            load()
-        elif choice == '3' or choice == 'settings':
-            settings()
-        elif choice == '4' or choice == 'help':
-            help()
-        elif choice == '5' or choice == 'quit':
-            quit()
+        if choice == '1' or choice == 'show':
+            print(print_trips())
+            tool_menu()
+        elif choice == '2' or choice == 'back':
+            main()
         else:
             print("Invalid option. Please select a valid number from the menu.")
+
+def tool_menu():
+    layout = f"""
+            --- Preset Page ---
+
+            1. Load      // Load trip data
+            2. Create    // Create a new trip
+            3. Remove    // Remove an existing trip
+            4. Back      // Go back to the main menu
+    """
+    print(layout)
+
+    choice = input("Please select an option (1-5): ").lower()
+
+    if choice == '1' or choice == 'load':
+        pass
+    elif choice == '2' or choice == 'create':
+        print(add_trip())
+    elif choice == '3' or choice == 'remove':
+        print(remove_trip_by_index())
+    elif choice == '4' or choice == 'back':
+        main()
+    else:
+        print("Invalid option. Please select a valid number from the menu.")
+
 
 if __name__ == '__main__':
     main()

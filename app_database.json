@@ -1,0 +1,24 @@
+{
+    "trips": [
+        {
+            "Title": "Reis naar barcelona",
+            "ID": 1,
+            "start_city": "eindhoven",
+            "end_city": "barcelona",
+            "temperature_unit": "metric",
+            "distance_unit": "imperial",
+            "fuel_cost": 5.0,
+            "fuel_consumption": 9.0
+        },
+        {
+            "Title": "Reis naar Praag",
+            "ID": 2,
+            "start_city": "nijmegen",
+            "end_city": "praag",
+            "temperature_unit": "imperial",
+            "distance_unit": "units",
+            "fuel_cost": 2.0,
+            "fuel_consumption": 8.0
+        }
+    ]
+}
