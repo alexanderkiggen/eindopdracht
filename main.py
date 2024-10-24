@@ -1,6 +1,8 @@
 import sys
+
+import json_processen
 import processen
-from json_processen import print_trips, add_trip, remove_trip_by_index
+from json_processen import print_trips, add_trip, remove_trip_by_index, select_trip_by_index, change_settings_by_index
 from processen import printer
 
 header = "===== De ultieme reis app ====="
@@ -12,7 +14,7 @@ def main():
                --- Home Page ---
 
         1. New       // Start planning your next trip
-        2. Load      // Load or create a destination pre-set from a file.
+        2. PreSets      // Load or create a destination pre-set from a file.
         3. Settings  // Change settings for current session.
         4. Help      // A guide.
         5. Quit      // Quit program.
@@ -23,8 +25,8 @@ def main():
 
         if choice == '1' or choice == 'new':
             new()
-        elif choice == '2' or choice == 'load':
-            load()
+        elif choice == '2' or choice == 'presets':
+            pre_set()
         elif choice == '3' or choice == 'settings':
             settings()
         elif choice == '4' or choice == 'help':
@@ -34,26 +36,34 @@ def main():
         else:
             print("Invalid option. Please select a valid number from the menu.")
 
-def new():
-    while True:
-        start_city = input("Please select a starting city: ").lower()
-        start_coords = processen.get_city_coordinaten(start_city)
+def new(pre_set_start_city=None, pre_set_end_city=None):
 
-        while start_coords is None:
-            print(f"Error: City '{start_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
-            start_city = input("Please select a valid starting city: ").lower()
+    if pre_set_start_city is None or pre_set_end_city is None:
+
+            start_city = input("Please select a starting city: ").lower()
             start_coords = processen.get_city_coordinaten(start_city)
 
-        end_city = input("Please select an end city: ").lower()
-        end_coords = processen.get_city_coordinaten(end_city)
+            while start_coords is None:
+                print(f"Error: City '{start_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
+                start_city = input("Please select a valid starting city: ").lower()
+                start_coords = processen.get_city_coordinaten(start_city)
 
-        while end_coords is None:
-            print(f"Error: City '{end_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
-            end_city = input("Please select a valid end city: ").lower()
+            end_city = input("Please select an end city: ").lower()
             end_coords = processen.get_city_coordinaten(end_city)
 
+            while end_coords is None:
+                print(f"Error: City '{end_city}' is not a valid city in Europe. Please try again.", file=sys.stderr)
+                end_city = input("Please select a valid end city: ").lower()
+                end_coords = processen.get_city_coordinaten(end_city)
+
+            directions = processen.get_directions(start_city=start_city, end_city=end_city)
+
+    else:
+        start_city = str(pre_set_start_city).lower()
+        end_city = str(pre_set_end_city).lower()
         directions = processen.get_directions(start_city=start_city, end_city=end_city)
 
+    while True:
         if directions is None:
             continue
 
@@ -64,17 +74,12 @@ def new():
         temp_end_city = directions['temp_end_city']
         weather_desc_end_city = directions['weather_desc_end_city']
 
-        if processen.settings["distance_unit"][0] == "kilometers":
-            distance_unit = "kilometers"
-        else:
-            distance_unit = "mijl"
-
-        if processen.settings["temperature_unit"][0] == "metric":
-            temperature_unit = "°C"
-        elif processen.settings["temperature_unit"][0] == "imperial":
-            temperature_unit = "°F"
-        else:
-            temperature_unit = "K"
+        distance_unit = "kilometers" if processen.settings["distance_unit"][0] == "kilometers" else "mijl"
+        temperature_unit = (
+            "°C" if processen.settings["temperature_unit"][0] == "metric"
+            else "°F" if processen.settings["temperature_unit"][0] == "imperial"
+            else "K"
+        )
 
         arrival_time, arrival_context = processen.parse_duration_and_calculate_arrival(duration)
 
@@ -87,17 +92,12 @@ def new():
             temperature_unit, weather_desc_end_city, fuel_price
         )
 
-        continue_question = None
-
-        while continue_question != "y" or continue_question != "n":
-            continue_question = input("Wilt u nog een reis plannen (y/n): ").lower()
+        while True:
+            continue_question = input("Wilt u terug naar het vorige menu (y): ").lower()
             if continue_question == "y":
-                break
-            elif continue_question == "n":
                 main()
             else:
                 print("Dat is geen geldige waarde, probeer het opnieuw", file=sys.stderr)
-
 
 def settings():
     while True:
@@ -192,7 +192,7 @@ def quit():
             print("Invalid option. Please select a valid letter from the menu.", file=sys.stderr)
             continue
 
-def load():
+def pre_set():
     while True:
         layout = f"""
                 {header}
@@ -215,19 +215,26 @@ def load():
 
 def tool_menu():
     layout = f"""
-            --- Preset Page ---
+        --- Preset Page ---
 
-            1. Load      // Load trip data
-            2. Create    // Create a new trip
-            3. Remove    // Remove an existing trip
-            4. Back      // Go back to the main menu
+        1. Load      // Load trip data
+        2. Create    // Create a new trip
+        3. Remove    // Remove an existing trip
+        4. Back      // Go back to the main menu
     """
     print(layout)
 
     choice = input("Please select an option (1-5): ").lower()
 
     if choice == '1' or choice == 'load':
-        pass
+        selected_trip = select_trip_by_index()
+        change_settings_by_index(selected_trip)
+
+        start_city = selected_trip.get('start_city')
+        end_city = selected_trip.get('end_city')
+
+        new(pre_set_start_city=start_city, pre_set_end_city=end_city)
+
     elif choice == '2' or choice == 'create':
         print(add_trip())
     elif choice == '3' or choice == 'remove':

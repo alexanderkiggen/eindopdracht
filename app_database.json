@@ -19,6 +19,38 @@
             "distance_unit": "units",
             "fuel_cost": 2.0,
             "fuel_consumption": 8.0
+        },
+        {
+            "Title": "Reis naar untrecht",
+            "ID": 3,
+            "start_city": "eindhoven",
+            "end_city": "utrecht",
+            "temperature_unit": "units",
+            "distance_unit": "kilometers",
+            "fuel_cost": 5.0,
+            "fuel_consumption": 7.0
+        },
+        {
+            "Title": "reis naar roermond",
+            "ID": 4,
+            "start_city": "weert",
+            "end_city": "roermond",
+            "temperature_unit": "metric",
+            "distance_unit": "kilometers",
+            "fuel_cost": 4.0,
+            "fuel_consumption": 8.0,
+            "travel_time": "0 uur en 31 minuten"
+        },
+        {
+            "Title": "Reis van Dusseldorf naar Dortmund",
+            "ID": 5,
+            "start_city": "dusseldorf",
+            "end_city": "dortmund",
+            "temperature_unit": "imperial",
+            "distance_unit": "miles",
+            "fuel_cost": 1.96,
+            "fuel_consumption": 9.1,
+            "travel_time": "1 uur en 3 minuten"
         }
     ]
 }

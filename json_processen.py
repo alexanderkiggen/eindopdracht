@@ -1,6 +1,6 @@
 import sys
 import json
-from processen import settings, get_city_coordinaten, get_directions
+from processen import settings, get_city_coordinaten, get_directions, settings_menu
 
 filename = 'app_database.json'
 
@@ -161,7 +161,7 @@ def print_trips():
     message = ""
     for index, trip in enumerate(data['trips']):
         message += f"""
-        Reis {index + 1}: {trip['Title']}
+        ReisID {index + 1}: {trip['Title']}
           |  Vertrekpunt: {trip['start_city']} -> Bestemming: {trip['end_city']}
           |  Eenheden: Afstand: {trip['distance_unit']} | Temperatuur: {trip['temperature_unit']}
           |  Brandstofkosten per liter: €{trip['fuel_cost']} | Verbruik: {trip['fuel_consumption']} liter per 100 kilometer
@@ -190,6 +190,41 @@ def remove_trip_by_index():
     else:
         return "Invalid index. No trip removed."
 
+def select_trip_by_index():
+    """
+    Select a trip by its index (input by user) and call `get_directions()` with the start and end city.
+    """
+    data = load_data()
+    trips = data.get('trips', [])
+
+    if not trips:
+        print("No trips available to select.")
+        return
+
+    try:
+        index = int(input("Enter the trip number to select: ")) - 1
+    except ValueError:
+        print("Invalid input. Please enter a number.")
+        return
+
+    if 0 <= index < len(trips):
+        selected_trip = trips[index]
+        return selected_trip
+    else:
+        print("Invalid index. No trip selected.")
+
+def change_settings_by_index(data):
+
+    distance_unit = data.get('distance_unit')
+    temperature_unit = data.get('temperature_unit')
+    fuel_cost = data.get('fuel_cost')
+    fuel_consumption = data.get('fuel_consumption')
+
+    settings_menu(request_value="distance_unit", request_item=distance_unit)
+    settings_menu(request_value="temperature_unit", request_item=temperature_unit)
+    settings_menu(request_value="fuel_cost", request_item=fuel_cost)
+    settings_menu(request_value="fuel_consumption", request_item=fuel_consumption)
+
 def add_trip():
     """
     Add a new trip with predefined details and validate that the end city is within 8 hours of the start city.
@@ -198,26 +233,31 @@ def add_trip():
     validator = Validator()
     data = load_data()
 
+    # Assign a new trip ID
     if data['trips']:
         last_trip_id = int(data['trips'][-1]['ID'])
         new_id = last_trip_id + 1
     else:
         new_id = 1
 
+    # Get start and end cities
     start_city = validator.validate_city("begin")
 
     while True:
         end_city = validator.validate_city("eind")
 
+        # Get directions between start and end city
         directions_info = get_directions(start_city=start_city, end_city=end_city)
 
         if not directions_info:
             return
 
+        # Check if the duration exceeds 8 hours
         if directions_info["duration_time"] is None:
-            print("Dit kan niet worden op geslagen, want deze rit is langer dan 8uur. Dit menu wordt afgesloten.")
-
+            print("Dit kan niet worden opgeslagen, want deze rit is langer dan 8 uur. Dit menu wordt afgesloten.")
+            return  # Exit the loop and stop the trip creation if trip is too long
         else:
+            # Create a new trip with validated information
             new_trip = {
                 "Title": validator.validate_title(),
                 "ID": int(new_id),
@@ -227,8 +267,13 @@ def add_trip():
                 "distance_unit": validator.validate_distance_unit(),
                 "fuel_cost": validator.validate_fuel_cost(),
                 "fuel_consumption": validator.validate_fuel_consumption(),
+                "travel_time": directions_info["duration_time"]  # Add travel time here
             }
 
+            # Add the new trip to the list of trips
             data['trips'].append(new_trip)
             save_data(data)
+
+            # Return a success message with the trip's travel time
             return f"Nieuwe reis '{new_trip['Title']}' is toegevoegd. Totale reistijd: {new_trip['travel_time']}."
+
