@@ -1,140 +1,149 @@
 import sys
 import json
-from processen import settings, get_city_coordinaten, get_directions, settings_menu
+from processen import settings, get_city_coordinates, get_directions, settings_menu
 
 filename = 'app_database.json'
 
 class Validator:
-
     def validate_title(self):
         """
-        Validates the title of the trip.
-        Ensures it's between 3 and 60 characters long and alphanumeric.
+        Valideert de titel van de reis.
+        Zorgt ervoor dat deze tussen de 3 en 60 tekens lang is en alfanumeriek.
+        Geeft een foutmelding als de titel niet voldoet aan de vereisten en vraagt om nieuwe invoer.
         """
         while True:
             try:
-                title = input("Voer de titel van de reis in (minimaal 3 en maximaal 60 tekens, alfanumeriek): ").strip()
+                title = input("Geef een titel voor de reis (minimaal 3 en maximaal 60 tekens, alleen letters en cijfers): ").strip()
 
                 if len(title) < 3:
-                    print(f"Fout: Titel moet minimaal 3 tekens bevatten. Probeer het opnieuw. ({len(title)})")
+                    print(f"\033[91mFout: De titel moet minstens 3 tekens bevatten. Je hebt nu {len(title)} tekens ingevoerd.\033[0m")
                     continue
 
                 if len(title) > 60:
-                    print(f"Fout: Titel mag maximaal 60 tekens bevatten. Probeer het opnieuw. ({len(title)})")
+                    print(f"\033[91mFout: De titel mag niet meer dan 60 tekens bevatten. Je hebt nu {len(title)} tekens ingevoerd.\033[0m")
                     continue
 
                 if not any(char.isalpha() for char in title):
-                    print("Fout: Titel moet ten minste één letter bevatten. Probeer het opnieuw.")
+                    print(f"\033[91mFout: De titel moet minimaal één letter bevatten. Probeer het opnieuw.\033[0m")
                     continue
 
                 return title
 
             except Exception as e:
-                print(f"Er is een fout opgetreden: {e}. Probeer het opnieuw.")
+                print(f"\033[91mEr is een fout opgetreden: {e}. Probeer het opnieuw.\033[0m")
 
     def validate_temperature_unit(self):
         """
-        Validates the temperature unit (metric/imperial/units).
+        Valideert de temperatuur-eenheid (metric/imperial/units).
+        Geeft een foutmelding bij een ongeldige invoer en vraagt om nieuwe invoer.
         """
         while True:
+            request_value = None
             try:
-                request_value = input("Enter new temperature unit (metric/imperial/units): ").lower()
+                request_value = input("Kies een temperatuur-eenheid (metric/imperial/units): ").lower()
 
                 if request_value not in settings["temperature_unit"][1]:
-                    print(f"Fout: Ongeldige temperatuur-eenheid '{request_value}'. Probeer het opnieuw.")
+                    print(f"\033[91mFout: Ongeldige temperatuur-eenheid '{request_value}'. Voer een geldige optie in (metric/imperial/units).\033[0m")
                     continue
 
                 return request_value
 
             except KeyError:
-                print(f"Fout: Ongeldige temperatuur-eenheid '{request_value}'. Probeer het opnieuw.")
+                print(f"\033[91mFout: Ongeldige temperatuur-eenheid '{request_value}'. Probeer het opnieuw.\033[0m")
             except Exception as e:
-                print(f"Er is een fout opgetreden: {e}. Probeer het opnieuw.")
+                print(f"\033[91mEr is een fout opgetreden: {e}. Probeer het opnieuw.\033[0m")
 
     def validate_distance_unit(self):
         """
-        Validates the distance unit (kilometers/miles).
+        Valideert de afstandseenheid (kilometers/miles).
+        Geeft een foutmelding bij ongeldige invoer en vraagt om nieuwe invoer.
         """
         while True:
+            request_value = None
             try:
-                request_value = input("Enter new distance unit (kilometers/miles): ").lower()
+                request_value = input("Kies een afstandseenheid (kilometers/miles): ").lower()
 
                 if request_value not in settings["distance_unit"][1]:
-                    print(f"Fout: Ongeldige afstandseenheid '{request_value}'. Probeer het opnieuw.")
+                    print(f"\033[91mFout: Ongeldige afstandseenheid '{request_value}'. Voer een geldige optie in (kilometers/miles).\033[0m")
                     continue
 
                 return request_value
 
             except KeyError:
-                print(f"Fout: Ongeldige afstandseenheid '{request_value}'. Probeer het opnieuw.")
+                print(f"\033[91mFout: Ongeldige afstandseenheid '{request_value}'. Probeer het opnieuw.\033[0m")
             except Exception as e:
-                print(f"Er is een fout opgetreden: {e}. Probeer het opnieuw.")
+                print(f"\033[91mEr is een fout opgetreden: {e}. Probeer het opnieuw.\033[0m")
 
     def validate_fuel_cost(self):
         """
-        Validates the fuel cost input, ensuring it's a positive number.
+        Valideert de ingevoerde brandstofprijs, waarbij het een positief getal moet zijn.
+        Geeft een foutmelding bij ongeldige invoer en vraagt om nieuwe invoer.
         """
         while True:
+            request_value = None
             try:
-                message = input("Voer een brandstofprijs in per liter: ").strip()
+                request_value = input("Voer de brandstofprijs in per liter (bijvoorbeeld 1.82): ").strip()
 
-                fuel_cost = float(message)
+                fuel_cost = float(request_value)
 
                 if fuel_cost <= 0:
-                    print(f"Fout: Ongeldige waarde, getal moet groter zijn dan 0. Probeer het opnieuw.")
+                    print(f"\033[91mFout: De prijs moet een positief getal zijn. Voer een waarde groter dan 0 in.\033[0m")
                     continue
 
                 return fuel_cost
 
             except ValueError:
-                print(f"Fout: Ongeldige waarde, geen geldig getal '{message}'. Probeer het opnieuw.")
+                print(f"\033[91mFout: Ongeldige invoer, '{request_value}' is geen geldig getal. Probeer het opnieuw.\033[0m")
             except Exception as e:
-                print(f"Er is een fout opgetreden: {e}. Probeer het opnieuw.")
+                print(f"\033[91mEr is een fout opgetreden: {e}. Probeer het opnieuw.\033[0m")
 
     def validate_fuel_consumption(self):
         """
-        Validates fuel consumption (liters per 100km), ensuring it's between 0 and 100.
+        Valideert het brandstofverbruik (liters per 100km), moet tussen 0 en 100 liggen.
+        Geeft een foutmelding bij ongeldige invoer en vraagt om nieuwe invoer.
         """
         while True:
+            request_value = None
             try:
-                message = input("Enter new fuel consumption (liters per 100km): ").strip()
+                request_value = input("Voer het brandstofverbruik in (liters per 100km, bijvoorbeeld 7.0): ").strip()
 
-                fuel_consumption = float(message)
+                fuel_consumption = float(request_value)
 
                 if fuel_consumption <= 0:
-                    print(f"Fout: Ongeldige waarde, brandstofverbruik moet groter zijn dan 0. Probeer het opnieuw.")
+                    print(f"\033[91mFout: Het brandstofverbruik moet een positief getal zijn. Voer een waarde groter dan 0 in.\033[0m")
                     continue
 
                 if fuel_consumption > 100:
-                    print(f"Fout: Ongeldige waarde, brandstofverbruik moet kleiner zijn dan 100 L/100km. Probeer het opnieuw.")
+                    print(f"\033[91mFout: Ongeldige waarde, het brandstofverbruik moet minder dan 100 liter per 100 km zijn.\033[0m")
                     continue
 
                 return fuel_consumption
 
             except ValueError:
-                print(f"Fout: Ongeldige waarde, geen geldig getal '{message}'. Probeer het opnieuw.")
+                print(f"\033[91mFout: Ongeldige invoer, '{request_value}' is geen geldig getal. Probeer het opnieuw.\033[0m")
             except Exception as e:
-                print(f"Er is een fout opgetreden: {e}. Probeer het opnieuw.")
+                print(f"\033[91mEr is een fout opgetreden: {e}. Probeer het opnieuw.\033[0m")
 
-    def validate_city(self, city_type):
+    def validate_city(self, city_type=None):
         """
-        Validates whether the entered city is a valid city in Europe.
-        The city_type argument determines whether it's for the start or end city.
+        Valideert of de ingevoerde stad een geldige Europese stad is.
+        Het argument `city_type` geeft aan of het om de begin- of eindstad gaat.
+        Geeft een foutmelding bij ongeldige invoer en vraagt om nieuwe invoer.
         """
         while True:
-            city = input(f"Selecteer een {city_type} stad: ").lower()
-            city_status = get_city_coordinaten(city)
+            city = input(f"Voer een {city_type}stad in: ").lower()
+            city_status = get_city_coordinates(city)
 
             if city_status is None:
-                print(f"Error: '{city}' is not a valid {city_type} city in Europe. Please try again.", file=sys.stderr)
+                print(f"\033[91mFout: '{city}' is geen geldige {city_type} stad in Europa. Probeer het opnieuw.\033[0m")
                 continue
 
             return city
 
 def load_data():
     """
-    Load data from the JSON file.
-    If the file does not exist, return an empty 'trips' list.
+    Laadt gegevens uit het JSON-bestand.
+    Als het bestand niet bestaat, wordt een lege lijst met 'trips' teruggegeven.
     """
     try:
         with open(filename, 'r') as file:
@@ -142,26 +151,26 @@ def load_data():
     except FileNotFoundError:
         return {'trips': []}
 
-def save_data(data):
+def save_data(data=None):
     """
-    Save the provided data to the JSON file.
+    Slaat de opgegeven gegevens op in het JSON-bestand.
     """
     with open(filename, 'w') as file:
         json.dump(data, file, indent=4)
 
 def print_trips():
     """
-    Generate a formatted string of all trips.
-    Returns a message if no trips are available or if data is invalid.
+    Genereert een geformatteerde string van alle opgeslagen reizen.
+    Geeft een melding als er geen reizen beschikbaar zijn of als de data onjuist is.
     """
     data = load_data()
     if not data.get('trips'):
-        return "No trips available."
+        return f"\033[91mEr zijn geen reizen beschikbaar.\033[0m"
 
     message = ""
     for index, trip in enumerate(data['trips']):
         message += f"""
-        ReisID {index + 1}: {trip['Title']}
+        ReisID: {index + 1}, {trip['Title']}
           |  Vertrekpunt: {trip['start_city']} -> Bestemming: {trip['end_city']}
           |  Eenheden: Afstand: {trip['distance_unit']} | Temperatuur: {trip['temperature_unit']}
           |  Brandstofkosten per liter: €{trip['fuel_cost']} | Verbruik: {trip['fuel_consumption']} liter per 100 kilometer
@@ -170,94 +179,101 @@ def print_trips():
 
 def remove_trip_by_index():
     """
-    Remove a trip by its index (input by user).
-    Returns a success or error message based on the input and data status.
+    Verwijdert een reis op basis van het door de gebruiker ingevoerde indexnummer.
+    Geeft een succes- of foutmelding op basis van de invoer en de status van de data.
     """
     data = load_data()
     trips = data.get('trips', [])
     if not trips:
-        return "No trips available to remove."
+        return f"\033[91mEr zijn geen reizen beschikbaar om te verwijderen.\033[0m"
 
     try:
-        index = int(input("Enter the trip number to remove: ")) - 1
+        index = int(input("Voer het reisnummer in dat je wilt verwijderen: ")) - 1
     except ValueError:
-        return "Invalid input. Please enter a number."
+        return f"\033[91mOngeldige invoer. Voer een nummer in.\033[0m"
 
     if 0 <= index < len(trips):
-        removed_trip = trips.pop(index)  # Remove the trip
-        save_data(data)  # Save the updated data
-        return f"Removed: {removed_trip['Title']} (ID: {removed_trip['ID']})"
+        removed_trip = trips.pop(index)
+        save_data(data)
+        return f"\033[91mVerwijderd: {removed_trip['Title']} (ID: {removed_trip['ID']})\033[0m"
     else:
-        return "Invalid index. No trip removed."
+        return f"\033[91mOngeldig nummer. Geen reis verwijderd.\033[0m"
 
 def select_trip_by_index():
     """
-    Select a trip by its index (input by user) and call `get_directions()` with the start and end city.
+    Selecteert een reis op basis van het door de gebruiker ingevoerde indexnummer en haalt de route op.
     """
     data = load_data()
     trips = data.get('trips', [])
 
     if not trips:
-        print("No trips available to select.")
+        print(f"\033[91mEr zijn geen reizen beschikbaar om te selecteren.\033[0m")
         return
 
+    while True:
+        try:
+            index = int(input("Voer het reisnummer in dat je wilt selecteren: ")) - 1
+
+            if 0 <= index < len(trips):
+                selected_trip = trips[index]
+                return selected_trip
+            else:
+                print(f"\033[91mOngeldige invoer. Kies een nummer tussen 1 en {len(trips)}.\033[0m")
+
+        except ValueError:
+            print(f"\033[91mOngeldige invoer. Voer een geldig nummer (ID) in.\033[0m")
+
+
+def change_settings_by_index(data=None):
+    """
+    Past de instellingen aan op basis van de doorgegeven gegevens (zoals eenheden, brandstofkosten en verbruik).
+    """
     try:
-        index = int(input("Enter the trip number to select: ")) - 1
-    except ValueError:
-        print("Invalid input. Please enter a number.")
-        return
+        distance_unit = data.get('distance_unit')
+        temperature_unit = data.get('temperature_unit')
+        fuel_cost = data.get('fuel_cost')
+        fuel_consumption = data.get('fuel_consumption')
 
-    if 0 <= index < len(trips):
-        selected_trip = trips[index]
-        return selected_trip
-    else:
-        print("Invalid index. No trip selected.")
+        settings_menu(request_value="distance_unit", request_item=distance_unit)
+        settings_menu(request_value="temperature_unit", request_item=temperature_unit)
+        settings_menu(request_value="fuel_cost", request_item=fuel_cost)
+        settings_menu(request_value="fuel_consumption", request_item=fuel_consumption)
 
-def change_settings_by_index(data):
-
-    distance_unit = data.get('distance_unit')
-    temperature_unit = data.get('temperature_unit')
-    fuel_cost = data.get('fuel_cost')
-    fuel_consumption = data.get('fuel_consumption')
-
-    settings_menu(request_value="distance_unit", request_item=distance_unit)
-    settings_menu(request_value="temperature_unit", request_item=temperature_unit)
-    settings_menu(request_value="fuel_cost", request_item=fuel_cost)
-    settings_menu(request_value="fuel_consumption", request_item=fuel_consumption)
+    except AttributeError as e:
+        print(f"\033[91mFout: een probleem met de gegevens - {e}\033[0m")
+    except TypeError as e:
+        print(f"\033[91mFout: onjuiste datatype - {e}")
+    except Exception as e:
+        print(f"\033[91mEen onverwachte fout is opgetreden: {e}\033[0m")
 
 def add_trip():
     """
-    Add a new trip with predefined details and validate that the end city is within 8 hours of the start city.
-    If not, prompt the user to enter a new end city or return to the main menu.
+    Voegt een nieuwe reis toe met vooraf gedefinieerde gegevens en valideert dat de eindstad binnen 8 uur van de beginstad ligt.
+    Als de reistijd langer is dan 8 uur, wordt de gebruiker gevraagd om een nieuwe eindstad in te voeren of terug te keren naar het hoofdmenu.
     """
     validator = Validator()
     data = load_data()
 
-    # Assign a new trip ID
     if data['trips']:
         last_trip_id = int(data['trips'][-1]['ID'])
         new_id = last_trip_id + 1
     else:
         new_id = 1
 
-    # Get start and end cities
     start_city = validator.validate_city("begin")
 
     while True:
         end_city = validator.validate_city("eind")
 
-        # Get directions between start and end city
         directions_info = get_directions(start_city=start_city, end_city=end_city)
 
         if not directions_info:
             return
 
-        # Check if the duration exceeds 8 hours
         if directions_info["duration_time"] is None:
-            print("Dit kan niet worden opgeslagen, want deze rit is langer dan 8 uur. Dit menu wordt afgesloten.")
-            return  # Exit the loop and stop the trip creation if trip is too long
+            return f"\033[91mDe reistijd is langer dan 8 uur. De reis kan niet worden opgeslagen.\033[0m"
+
         else:
-            # Create a new trip with validated information
             new_trip = {
                 "Title": validator.validate_title(),
                 "ID": int(new_id),
@@ -267,13 +283,11 @@ def add_trip():
                 "distance_unit": validator.validate_distance_unit(),
                 "fuel_cost": validator.validate_fuel_cost(),
                 "fuel_consumption": validator.validate_fuel_consumption(),
-                "travel_time": directions_info["duration_time"]  # Add travel time here
+                "travel_time": directions_info["duration_time"]
             }
 
-            # Add the new trip to the list of trips
             data['trips'].append(new_trip)
             save_data(data)
 
-            # Return a success message with the trip's travel time
-            return f"Nieuwe reis '{new_trip['Title']}' is toegevoegd. Totale reistijd: {new_trip['travel_time']}."
+            return f"\033[92mNieuwe reis '{new_trip['Title']}' is toegevoegd.\033[0m"
 

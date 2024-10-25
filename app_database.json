@@ -1,56 +1,26 @@
 {
     "trips": [
         {
-            "Title": "Reis naar barcelona",
-            "ID": 1,
-            "start_city": "eindhoven",
-            "end_city": "barcelona",
-            "temperature_unit": "metric",
-            "distance_unit": "imperial",
-            "fuel_cost": 5.0,
-            "fuel_consumption": 9.0
-        },
-        {
-            "Title": "Reis naar Praag",
+            "Title": "Dagje uit naar Brabant.",
             "ID": 2,
-            "start_city": "nijmegen",
-            "end_city": "praag",
-            "temperature_unit": "imperial",
-            "distance_unit": "units",
-            "fuel_cost": 2.0,
-            "fuel_consumption": 8.0
+            "start_city": "amsterdam",
+            "end_city": "eindhoven",
+            "temperature_unit": "metric",
+            "distance_unit": "miles",
+            "fuel_cost": 1.97388086748,
+            "fuel_consumption": 9.78,
+            "travel_time": "1 uur en 38 minuten"
         },
         {
-            "Title": "Reis naar untrecht",
-            "ID": 3,
-            "start_city": "eindhoven",
-            "end_city": "utrecht",
+            "Title": "Rit naar Leuven voor het werk.",
+            "ID": 4,
+            "start_city": "brussel",
+            "end_city": "leuven",
             "temperature_unit": "units",
             "distance_unit": "kilometers",
-            "fuel_cost": 5.0,
-            "fuel_consumption": 7.0
-        },
-        {
-            "Title": "reis naar roermond",
-            "ID": 4,
-            "start_city": "weert",
-            "end_city": "roermond",
-            "temperature_unit": "metric",
-            "distance_unit": "kilometers",
-            "fuel_cost": 4.0,
-            "fuel_consumption": 8.0,
-            "travel_time": "0 uur en 31 minuten"
-        },
-        {
-            "Title": "Reis van Dusseldorf naar Dortmund",
-            "ID": 5,
-            "start_city": "dusseldorf",
-            "end_city": "dortmund",
-            "temperature_unit": "imperial",
-            "distance_unit": "miles",
-            "fuel_cost": 1.96,
-            "fuel_consumption": 9.1,
-            "travel_time": "1 uur en 3 minuten"
+            "fuel_cost": 1.43,
+            "fuel_consumption": 9.99,
+            "travel_time": "0 uur en 25 minuten"
         }
     ]
 }

@@ -16,61 +16,93 @@ settings = {
 }
 
 def settings_menu(request_value=None, request_item=None):
+    """
+    Behandelt wijzigingen in de instellingen voor temperatuur, afstand, brandstofkosten en verbruik.
+    Ook mogelijk om standaardwaarden te herstellen.
+
+    Parameters:
+    request_value (str): De instelling die aangepast moet worden.
+    request_item (str/float/int): De nieuwe waarde voor de instelling.
+
+    Returns:
+    str: Foutmelding als de invoer onjuist is, anders None.
+    """
     if request_value in settings:
         try:
             if request_value == "temperature_unit" or request_value == "distance_unit":
                 if request_item.lower() in settings[request_value][1]:
                     settings[request_value][0] = request_item.lower()
                 else:
-                    return f"{request_item} is not part of {request_value}"
-
+                    return f"\033[91m'{request_item}' is geen geldige optie voor '{request_value}'.\033[0m"
             elif request_value == "fuel_cost":
                 try:
                     settings[request_value][0] = float(request_item)
                 except ValueError:
-                    return f"{request_item} cannot be converted to a float."
-
+                    return f"\033[91m'{request_item}' kan niet worden omgezet naar een getal.\033[0m"
             elif request_value == "fuel_consumption":
                 try:
                     consumption_value = float(request_item)
                     if consumption_value <= 100:
                         settings[request_value][0] = consumption_value
                     else:
-                        return f"{request_item} is higher than 100."
+                        return f"\033[91m'{request_item}' is hoger dan 100. Dit lijkt onrealistisch.\033[0m"
                 except ValueError:
-                    return f"{request_item} cannot be converted to a float."
-
+                    return f"\033[91m'{request_item}' kan niet worden omgezet naar een getal.\033[0m"
         except ValueError:
-            return "Probeer het opnieuw"
-
+            return f"\033[91mOngeldige invoer. Probeer het opnieuw.\033[0m"
     elif request_value == "restore_defaults":
         for key, value in settings.items():
             if isinstance(value[1], tuple):
-                new_first_item = value[1][0]
-                value[0] = new_first_item
+                settings[key][0] = value[1][0]
     else:
-        return f"{request_value} is not a valid option."
+        return f"\033[91m'{request_value}' is geen geldige optie.\033[0m"
 
 def convert_unit(unit=None, amount=None):
-    if unit == "temperature_unit":
-        pass
+    """
+    Converteert afstanden of tijden naar de juiste eenheden (kilometers/mijlen en uren/minuten).
 
-    elif unit == "distance_unit":
-        if settings["distance_unit"][0] == "kilometers":
-            return amount / 1000
-        elif settings["distance_unit"][0] == "miles":
-            return amount / 1000 * 0.621371192
+    Parameters:
+    unit (str): Type eenheid (bv. 'distance_unit' of 'duration').
+    amount (float/int): De te converteren waarde (bijv. afstand in meters of duur in seconden).
 
-    elif unit == "duration":
-        hours = amount // 3600
-        minutes = (amount % 3600) // 60
-
-        if hours >= 8:
-            return None, "De reistijd is langer dan 8 uur. Het programma wordt afgebroken."
+    Returns:
+    float/str: De geconverteerde afstand of tijd. Geeft None terug als de duur te lang is.
+    """
+    try:
+        if unit == "distance_unit":
+            if settings["distance_unit"][0] == "kilometers":
+                return amount / 1000
+            elif settings["distance_unit"][0] == "miles":
+                return amount / 1000 * 0.621371192
+            else:
+                raise ValueError(f"\033[91mOngeldige afstandseenheid in instellingen.\033[0m")
+        elif unit == "duration":
+            hours = amount // 3600
+            minutes = (amount % 3600) // 60
+            if hours >= 8:
+                return None, f"\033[91mDe reistijd is langer dan 8 uur. De reis wordt afgebroken.\033[0m"
+            else:
+                return f"{int(hours)} uur en {int(minutes)} minuten", None
         else:
-            return f"{int(hours)} uur en {int(minutes)} minuten", None
+            raise ValueError(f"\033[91mOngeldige eenheid opgegeven.\033[0m")
 
-def get_city_coordinaten(city_name=None):
+    except TypeError as e:
+        return None, f"\033[91mFout: onjuiste datatype - {e}\033[0m"
+    except ValueError as e:
+        return None, f"\033[91mFout: {e}"
+    except Exception as e:
+        return None, f"\033[91mEen onverwachte fout is opgetreden: {e}\033[0m"
+
+def get_city_coordinates (city_name=None):
+    """
+    Haalt de geografische coördinaten van een opgegeven stad op via een API.
+
+    Parameters:
+    city_name (str): De naam van de stad waarvan de coördinaten worden opgehaald.
+
+    Returns:
+    list/None: Lijst met lengte- en breedtegraad van de stad, of None als de stad niet wordt gevonden.
+    """
     params = {
         'api_key': api_key_transport,
         'text': city_name
@@ -88,12 +120,22 @@ def get_city_coordinaten(city_name=None):
         else:
             return None
     else:
-        print(f"Error fetching coordinates for {city_name}: {response.status_code}")
+        print(f"\033[91mFout bij het ophalen van coördinaten voor {city_name}: {response.status_code}\033[0m")
         return None
 
 def get_directions(start_city=None, end_city=None):
-    start_coords = get_city_coordinaten(start_city)
-    end_coords = get_city_coordinaten(end_city)
+    """
+    Haalt routegegevens op tussen twee steden, inclusief afstand, reistijd en brandstofkosten.
+
+    Parameters:
+    start_city (str): De naam van de vertrekstad.
+    end_city (str): De naam van de aankomststad.
+
+    Returns:
+    dict/str: Woordenboek met route-informatie of foutmelding bij mislukking.
+    """
+    start_coords = get_city_coordinates(start_city)
+    end_coords = get_city_coordinates(end_city)
 
     if start_city and end_coords:
         payload = {
@@ -140,11 +182,20 @@ def get_directions(start_city=None, end_city=None):
                 "time_until_sun_up_or_down": time_until_sun_up_or_down
             }
         else:
-            return f"Error fetching directions: {response.status_code} - {response.text}"
+            return f"Fout bij het ophalen van de route: {response.status_code} - {response.text}"
     else:
-        return "Could not retrieve coordinates for one or both cities."
+        return "Kon de coördinaten van een of beide steden niet ophalen."
 
 def get_weather(city=None):
+    """
+    Haalt de huidige weersinformatie van een opgegeven stad op via een API.
+
+    Parameters:
+    city (str): De naam van de stad.
+
+    Returns:
+    dict/str: Woordenboek met temperatuur, weeromschrijving, zonsopkomst en zonsondergangstijden of foutmelding.
+    """
     params = {
         "q": city,
         "appid": api_key_weather,
@@ -164,33 +215,62 @@ def get_weather(city=None):
             "sunset": data['sys']['sunset']
         }
     else:
-        return f"Error: {response.status_code}"
+        return f"\033[91mFout: {response.status_code}\033[0m"
 
 def timestamp_converter(sunrise_time=None, sunset_time=None, arrival_time=None):
-    sunrise_datetime = datetime.fromtimestamp(sunrise_time)
-    sunset_datetime = datetime.fromtimestamp(sunset_time)
+    """
+    Berekent de tijd tot zonsopkomst of zonsondergang gebaseerd op de aankomsttijd.
 
-    if arrival_time < sunrise_datetime:
-        time_difference = sunrise_datetime - arrival_time
-        hours, remainder = divmod(time_difference.seconds, 3600)
-        minutes = remainder // 60
-        return [{"next_event": "sunrise"}, f"{hours} uur en {minutes} minuten tot zonsopkomst"]
+    Parameters:
+    sunrise_time (int): Tijdstempel voor zonsopkomst.
+    sunset_time (int): Tijdstempel voor zonsondergang.
+    arrival_time (datetime): Verwachte aankomsttijd.
 
-    elif arrival_time < sunset_datetime:
-        time_difference = sunset_datetime - arrival_time
-        hours, remainder = divmod(time_difference.seconds, 3600)
-        minutes = remainder // 60
-        return [{"next_event": "sunset"}, f"{hours} uur en {minutes} minuten tot zonsondergang"]
+    Returns:
+    list: Informatie over het volgende zonne-event en de tijd tot dat moment.
+    """
+    try:
+        # Converteer tijdstempels naar datetime-objecten
+        sunrise_datetime = datetime.fromtimestamp(sunrise_time)
+        sunset_datetime = datetime.fromtimestamp(sunset_time)
 
-    else:
-        next_day_sunrise = sunrise_datetime + timedelta(days=1)
-        time_difference = next_day_sunrise - arrival_time
-        hours, remainder = divmod(time_difference.seconds, 3600)
-        minutes = remainder // 60
-        return [{"next_event": "sunrise"}, f"{hours} uur en {minutes} minuten tot de volgende zonsopkomst"]
+        if arrival_time < sunrise_datetime:
+            time_difference = sunrise_datetime - arrival_time
+            hours, remainder = divmod(time_difference.seconds, 3600)
+            minutes = remainder // 60
+            return [{"next_event": "zonsopkomst"}, f"{hours} uur en {minutes} minuten tot zonsopkomst"]
 
-def parse_duration_and_calculate_arrival(duration):
-    print(f"Duration returned: {duration}")
+        elif arrival_time < sunset_datetime:
+            time_difference = sunset_datetime - arrival_time
+            hours, remainder = divmod(time_difference.seconds, 3600)
+            minutes = remainder // 60
+            return [{"next_event": "zonsondergang"}, f"{hours} uur en {minutes} minuten tot zonsondergang"]
+
+        else:
+            next_day_sunrise = sunrise_datetime + timedelta(days=1)
+            time_difference = next_day_sunrise - arrival_time
+            hours, remainder = divmod(time_difference.seconds, 3600)
+            minutes = remainder // 60
+            return [{"next_event": "zonsopkomst"}, f"{hours} uur en {minutes} minuten tot de volgende zonsopkomst"]
+
+    except TypeError as e:
+        return [None, f"\033[91mFout: onjuiste datatype - {e}\033[0m"]
+    except ValueError as e:
+        return [None, f"\033[91mFout: {e}\033[0m"]
+    except Exception as e:
+        return [None, f"\033[91mEen onverwachte fout is opgetreden: {e}\033[0m"]
+
+def parse_duration_and_calculate_arrival(duration=None):
+    """
+    Parseert de duur van de reis en berekent de verwachte aankomsttijd.
+
+    Parameters:
+    duration (str): De duur van de reis in uren en minuten.
+
+    Returns:
+    tuple: De verwachte aankomsttijd en context (vandaag/morgen/etc.), of een foutmelding.
+    """
+    print(f"Teruggegeven duur: {duration}")
 
     match = re.search(r'(?:(\d+)\s*uur)?\s*(?:(\d+)\s*minuten)?', duration)
 
@@ -198,7 +278,7 @@ def parse_duration_and_calculate_arrival(duration):
         duration_hours = int(match.group(1)) if match.group(1) else 0
         duration_minutes = int(match.group(2)) if match.group(2) else 0
     else:
-        return None, "Error: Unable to parse duration"
+        return None, f"\033[91mFout: kan de duur niet verwerken.\033[0m"
 
     total_duration_hours = duration_hours + duration_minutes / 60
 
@@ -206,34 +286,40 @@ def parse_duration_and_calculate_arrival(duration):
 
     return arrival_time, arrival_context
 
-def calculate_arrival_time(total_duration_hours):
-    current_time = datetime.now()
-    arrival_time = current_time + timedelta(hours=total_duration_hours)
-
-    if arrival_time.date() == current_time.date():
-        arrival_context = "vandaag"
-    elif arrival_time.date() == (current_time + timedelta(days=1)).date():
-        arrival_context = "morgen"
-    elif arrival_time.date() == (current_time + timedelta(days=2)).date():
-        arrival_context = "overmorgen"
-    else:
-        arrival_context = "later"
-
-    return arrival_time, arrival_context
-
-def printer(
-        start_city, end_city, distance, distance_unit, duration,
-        arrival_context, arrival_time, sunset_info, temp_end_city,
-        temperature_unit, weather_desc_end_city, fuel_price
-):
-    message = f"""
-    De route van {start_city.capitalize()} naar {end_city.capitalize()} bedraagt 
-    {distance:.1f} {distance_unit} en zal ongeveer {duration} duren in een auto. 
-    Als je nu begint met rijden, ben je er {arrival_context} om {arrival_time.strftime("%H:%M")} (zonder tussentijdse pauzes). 
-    Dan heb je nog {sunset_info}. 
-    De temperatuur in {end_city.capitalize()} is momenteel {temp_end_city:.2f}{temperature_unit} en het weer is {weather_desc_end_city}. 
-    De geschatte brandstofprijs voor de rit bedraagt €{fuel_price:.2f}.
-    Veel succes en een veilige reis!
+def calculate_arrival_time(total_duration_hours=None):
     """
+    Berekent de aankomsttijd op basis van de verstreken reistijd.
 
-    print(message)
+    Parameters:
+    total_duration_hours (float): De totale reistijd in uren.
+
+    Returns:
+    tuple: Aankomsttijd (datetime) en context (vandaag/morgen/overmorgen/etc.).
+    """
+    try:
+        if total_duration_hours is None:
+            raise ValueError(f"\033[91mDe totale reistijd mag niet None zijn.\033[0m")
+
+        total_duration_hours = float(total_duration_hours)
+
+        current_time = datetime.now()
+        arrival_time = current_time + timedelta(hours=total_duration_hours)
+
+        if arrival_time.date() == current_time.date():
+            arrival_context = "vandaag"
+        elif arrival_time.date() == (current_time + timedelta(days=1)).date():
+            arrival_context = "morgen"
+        elif arrival_time.date() == (current_time + timedelta(days=2)).date():
+            arrival_context = "overmorgen"
+        else:
+            arrival_context = "later"
+
+        return arrival_time, arrival_context
+
+    except ValueError as e:
+        print(f"\033[91mFout: {e}\033[0m")
+    except TypeError as e:
+        print(f"\033[91mFout: onjuiste datatype - {e}\033[0m")
+    except Exception as e:
+        print(f"\033[91mEen onverwachte fout is opgetreden: {e}\033[0m")
+
